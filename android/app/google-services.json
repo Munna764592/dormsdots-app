@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "495635126740",
+    "firebase_url": "https://dormsdots-920e6-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "dormsdots-920e6",
+    "storage_bucket": "dormsdots-920e6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:495635126740:android:c4781974f0cee1f8209e41",
+        "android_client_info": {
+          "package_name": "com.dormsdots"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "495635126740-6cm8pehi7o7613rea79c0t4656ktu4vm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB1WtNBTSM-qYVGP2r2mX21kBejobbtRzI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "495635126740-6cm8pehi7o7613rea79c0t4656ktu4vm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
