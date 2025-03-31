@@ -5,11 +5,16 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StyleSheet,
-  StatusBar
+  StatusBar,
+  Button,
 } from 'react-native';
 import Slider from '../components/Slider';
 import {useNavigation, NavigationProp} from '@react-navigation/native';
 import {ArrowRight} from 'lucide-react-native';
+import {BACKEND_URI} from '@env';
+import {showToast} from '../store/toastSlice';
+import {useDispatch} from 'react-redux';
+import {AppDispatch} from '../store/index';
 
 type RootStackParamList = {
   Login: undefined; // Define your route names here
@@ -21,6 +26,8 @@ export default function StartPage() {
   const handleNavigate = (screen: keyof RootStackParamList) => {
     navigation.navigate(screen);
   };
+
+  const dispatch = useDispatch<AppDispatch>();
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -50,6 +57,13 @@ export default function StartPage() {
           <Slider />
         </View>
 
+        {/* <View>
+          <TouchableOpacity
+            style={styles.signInButton}
+            onPress={() => dispatch(showToast('This is a premium toast!'))}>
+            <Text style={styles.signInButtonText}>Show Toast</Text>
+          </TouchableOpacity>
+        </View> */}
         {/* Action Buttons */}
         <View className="space-y-4 mt-auto mb-8">
           <TouchableOpacity
@@ -64,7 +78,7 @@ export default function StartPage() {
             <Text
               style={styles.textRegular}
               className="text-gray-400 font-bold text-center my-4 text-base">
-              Interact ~ Marketplace
+              Interact
             </Text>
           </View>
         </View>
@@ -92,7 +106,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
-  icon:{
-    marginLeft:10,
-  }
+  icon: {
+    marginLeft: 10,
+  },
 });

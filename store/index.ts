@@ -3,13 +3,16 @@ import authReducer from './authSlice';
 import postsReducer from './postsSlice';
 import newsReducer from './newsSlice';
 import profileRedux from "./profileRedux";
+import toastReducer from "./toastSlice";
+
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     posts: postsReducer,
     news: newsReducer,
-    profile: profileRedux
+    profile: profileRedux,
+    toast: toastReducer,
   },
 });
 

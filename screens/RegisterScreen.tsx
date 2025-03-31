@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,8 @@ const {width, height} = Dimensions.get('window');
 type RootStackParamList = {
   Login: undefined;
   Register: undefined;
-  RoleSelection: undefined;
+  Home: undefined;
+  VerifyOtp: undefined;
 };
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<
@@ -30,10 +31,14 @@ type RegisterScreenNavigationProp = NativeStackNavigationProp<
 interface Props {
   navigation: RegisterScreenNavigationProp;
 }
+
 import {useDispatch, useSelector} from 'react-redux';
 import auth from '@react-native-firebase/auth';
-import {googleSignIn} from '../store/authSlice';
+import {googleSignIn, registerUser} from '../store/authSlice';
 import {AppDispatch, RootState} from '../store/index';
+import {useQuery} from '@apollo/client';
+import {GET_USERS} from '../graphql/queries/userQueries';
+import { showToast } from '../store/toastSlice';
 
 const validationSchema = Yup.object().shape({
   email: Yup.string()
@@ -54,19 +59,42 @@ const RegisterScreen: React.FC<Props> = ({navigation}) => {
   const dispatch = useDispatch<AppDispatch>();
 
   const handleRegister = () => {
-    navigation.navigate('RoleSelection');
+    navigation.navigate('Home');
   };
 
   const handleGoogleSignIn = async () => {
     try {
-      await dispatch(googleSignIn()).unwrap();
+      navigation.navigate('VerifyOtp');
+      // await dispatch(googleSignIn()).unwrap();
     } catch (error: any) {
-      Alert.alert('Google Sign-In Error', error.message);
+      // Alert.alert('Google Sign-In Error', error.message);
     }
   };
 
+    const otpScreen = useSelector((state: any) => state.auth.otpScreen);
+  
+    useEffect(() => {
+      if (otpScreen) {
+        navigation.navigate('VerifyOtp'); 
+      }
+    }, [otpScreen]);
+
+  const {loading, error, data} = useQuery(GET_USERS);
+
   return (
     <View style={styles.container}>
+      {/* <ul>
+        {data.getUsers.map(
+          (
+            user: any, 
+          ) => (
+            <li key={user.id}>
+              {user.name} - {user.email}
+            </li>
+          ),
+        )}
+      </ul> */}
+
       {/* Top gradient circle */}
       <View style={styles.topGradient}>
         {/* <View style={styles.gradientCircle} /> */}
@@ -101,9 +129,20 @@ const RegisterScreen: React.FC<Props> = ({navigation}) => {
         <Formik
           initialValues={{email: '', password: '', confirmPassword: ''}}
           validationSchema={validationSchema}
-          onSubmit={values => {
-            Alert.alert('Success', 'Registration successful!');
-            navigation.navigate('RoleSelection');
+          onSubmit={async values => {
+            try {
+              await dispatch(
+                registerUser({
+                  email: values.email,
+                  password: values.password,
+                  confirmPassword: values.confirmPassword,
+                }),
+              ).unwrap();
+            } catch (error: any) {
+              if (error.includes('auth/email-already-in-use')) {
+                dispatch(showToast('Email already registered'))
+              }
+            }
           }}>
           {({
             handleChange,
@@ -254,7 +293,7 @@ const RegisterScreen: React.FC<Props> = ({navigation}) => {
 const styles = StyleSheet.create({
   PoppinsExtraLight: {
     fontFamily: 'Poppins-ExtraLight',
-    marginLeft:2
+    marginLeft: 2,
   },
   container: {
     flex: 1,

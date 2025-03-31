@@ -5,6 +5,12 @@ import {
   statusCodes
 } from "@react-native-google-signin/google-signin";
 import database from "@react-native-firebase/database";
+import { ApolloClient, InMemoryCache } from "@apollo/client";
+import { BACKEND_URI } from "@env";
+import axios from "axios";
+import { GET_USERS } from "../graphql/queries/userQueries";
+import { SEND_OTP } from "../graphql/mutations/userMutations";
+import client from "../graphql/client";
 
 interface AuthState {
   user: any | null;
@@ -12,6 +18,7 @@ interface AuthState {
   loading: boolean;
   error: string | null;
   lsloading: boolean;
+  otpScreen: boolean;
 }
 
 const initialState: AuthState = {
@@ -19,7 +26,8 @@ const initialState: AuthState = {
   isAuthenticated: false,
   loading: false,
   error: null,
-  lsloading: false
+  lsloading: false,
+  otpScreen: false
 };
 
 export const googleSignIn = createAsyncThunk(
@@ -65,7 +73,7 @@ export const googleSignIn = createAsyncThunk(
 
       return userData;
     } catch (error: any) {
-      console.error("Google Sign-In Error:", error);
+      // console.error("Google Sign-In Error:", error);
       return rejectWithValue(error.message);
     }
   }
@@ -85,10 +93,119 @@ export const googleSignOut = createAsyncThunk(
   }
 );
 
+function generateOtp(): string {
+  return Math.floor(10000 + Math.random() * 90000).toString();
+}
+
+export const registerUser = createAsyncThunk(
+  "auth/registerUser",
+  async (
+    {
+      email,
+      password,
+      confirmPassword
+    }: {
+      email: string;
+      password: string;
+      confirmPassword: string;
+    },
+    { rejectWithValue, dispatch }
+  ) => {
+    try {
+      if (password !== confirmPassword) {
+        throw new Error("Passwords do not match!");
+      }
+      const clientOtp = generateOtp();
+      const userCredential = await auth().createUserWithEmailAndPassword(
+        email,
+        password
+      );
+      const user = userCredential.user;
+
+      // Step 3: Store user details in Firebase Realtime Database
+      const userData = {
+        uid: user.uid,
+        email: user.email,
+        emailVerified: false,
+        otp: generateOtp(),
+        createdAt: new Date().toISOString()
+      };
+
+      await database().ref(`/usersdata/${user.uid}`).set(userData);
+
+      const { data } = await client.mutate({
+        mutation: SEND_OTP,
+        variables: {
+          input: {
+            clientOtp,
+            email
+          }
+        }
+      });
+
+      if (data?.sendOtp) {
+        dispatch(setOtpScreenStatus(true));
+      }
+
+      return {
+        ...userData,
+        message: "User registered successfully."
+      };
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Failed to register user");
+    }
+  }
+);
+
+export const sendOtp = createAsyncThunk(
+  "auth/sendOtp",
+  async (email: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(BACKEND_URI, {
+        query: `
+          mutation {
+            sendOtp(input: { email: "${email}" })
+          }
+        `
+      });
+
+      if (response.data.data.sendOtp) {
+        return { email, message: "OTP sent successfully" };
+      } else {
+        throw new Error("Failed to send OTP");
+      }
+    } catch (error: any) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+export const matchOtp = createAsyncThunk<
+  void, // Return type (no return needed)
+  { otp: string }, // Expected argument type
+  { rejectValue: string } // Custom error type
+>("auth/matchOtp", async ({ otp }, { rejectWithValue }) => {
+  try {
+    console.log(otp);
+
+    if (otp === "12345") {
+      return; // Success
+    } else {
+      throw new Error("Invalid OTP");
+    }
+  } catch (error: any) {
+    return rejectWithValue(error.message || "OTP Verification Failed");
+  }
+});
+
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
+    setOtpScreenStatus: (state, action) => {
+      state.otpScreen = action.payload;
+    },
     setUser: (state, action: PayloadAction<any>) => {
       state.user = action.payload;
       state.isAuthenticated = !!action.payload;
@@ -110,7 +227,7 @@ const authSlice = createSlice({
       .addCase(googleSignIn.fulfilled, (state, action) => {
         state.lsloading = false;
         state.user = action.payload;
-        state.isAuthenticated = true; 
+        state.isAuthenticated = true;
         state.error = null;
       })
       .addCase(googleSignIn.rejected, (state, action) => {
@@ -132,9 +249,38 @@ const authSlice = createSlice({
         state.lsloading = false;
         state.error = action.payload as string;
         state.isAuthenticated = false;
+      })
+      .addCase(registerUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(registerUser.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+        state.error = null;
+      })
+      .addCase(registerUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(matchOtp.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(matchOtp.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+        state.isAuthenticated = true;
+      })
+      .addCase(matchOtp.rejected, (state, action) => {
+        state.loading = false;
+        state.user = null;
+        state.isAuthenticated = false; // Unauthenticated after OTP failure
+        state.error = action.payload as string;
       });
   }
 });
 
-export const { setUser, clearUser, resetError } = authSlice.actions;
+export const { setUser, clearUser, resetError, setOtpScreenStatus } =
+  authSlice.actions;
 export default authSlice.reducer;

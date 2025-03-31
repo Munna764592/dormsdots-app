@@ -1,4 +1,4 @@
-import React, {useRef, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {NavigationContainer, useNavigation} from '@react-navigation/native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {
@@ -68,8 +68,26 @@ const Stack = createStackNavigator();
 
 import {AppDispatch} from './store/index';
 import {rightSidebar} from './store/profileRedux';
+import {ApolloProvider} from '@apollo/client';
+import client from './utils/appClient';
+import VerifyOTP from './screens/VerifyOtpScreen';
+import Toastify from './components/toastify';
+import {StackNavigationProp} from '@react-navigation/stack';
+
+type RootStackParamList = {
+  VerifyOtp: undefined;
+};
 
 function AuthStack() {
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const otpScreen = useSelector((state: any) => state.auth.otpScreen);
+
+  // useEffect(() => {
+  //   if (otpScreen) {
+  //     navigation.navigate('VerifyOtp'); 
+  //   }
+  // }, [otpScreen]);
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -81,6 +99,7 @@ function AuthStack() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
+      <Stack.Screen name="VerifyOtp" component={VerifyOTP} />
     </Stack.Navigator>
   );
 }
@@ -759,9 +778,9 @@ function HomeTabs() {
 }
 
 function MainStack() {
-    const profileSidebar = useSelector(
-      (state: RootState) => state.profile.profileSidebar,
-    );
+  const profileSidebar = useSelector(
+    (state: RootState) => state.profile.profileSidebar,
+  );
 
   return (
     <>
@@ -780,25 +799,30 @@ function AppNavigator() {
     (state: RootState) => state.auth.isAuthenticated,
   );
   return (
-    <Stack.Navigator screenOptions={{headerShown: false}}>
-      {isAuthenticated ? (
-        <Stack.Screen name="MainApp" component={MainStack} />
-      ) : (
-        <Stack.Screen name="Auth" component={AuthStack} />
-      )}
-    </Stack.Navigator>
+    <>
+      <Stack.Navigator screenOptions={{headerShown: false}}>
+        {isAuthenticated ? (
+          <Stack.Screen name="MainApp" component={MainStack} />
+        ) : (
+          <Stack.Screen name="Auth" component={AuthStack} />
+        )}
+      </Stack.Navigator>
+      <Toastify />
+    </>
   );
 }
 
 export default function App() {
   return (
-    <Provider store={store}>
-      <ThemeProvider>
-        <NavigationContainer>
-          <AppNavigator />
-        </NavigationContainer>
-      </ThemeProvider>
-    </Provider>
+    <ApolloProvider client={client}>
+      <Provider store={store}>
+        <ThemeProvider>
+          <NavigationContainer>
+            <AppNavigator />
+          </NavigationContainer>
+        </ThemeProvider>
+      </Provider>
+    </ApolloProvider>
   );
 }
 
